@@ -14,7 +14,6 @@ Welcome to BlocksInCloud Apificación's documentation!
  
 .. toctree::
    :maxdepth: 1
-   :hidden:
    :caption: Guía Funcional:
    
    es/guia_tecnica/apigt20190729
