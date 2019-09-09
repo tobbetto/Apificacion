@@ -1,0 +1,816 @@
+﻿.. centered:: |image0|
+
+=========================
+FUNCIONALIDAD APIFICACIÓN
+=========================
+
+========================== =======================================================================
+Fecha: 24 de julio de 2019 Área responsable: Poner aquí nombre del área responsable del documento.
+========================== =======================================================================
+
+`1. INTRODUCCIÓN 5 <#introducción>`__
+
+`2. FLUJO DE CREACIÓN DE PEDIDO BÁSICO
+5 <#flujo-de-creación-de-pedido-básico>`__
+
+`3. FLUJO DE CREACIÓN DE UN PEDIDO DE KIOSCO
+6 <#flujo-de-creación-de-un-pedido-de-kiosco>`__
+
+`4. INICIO DE PEDIDO 6 <#inicio-de-pedido>`__
+
+`5. TIENDAS POR LOCALIZACIÓN 8 <#tiendas-por-localización>`__
+
+`6. HORAS DISPONIBLES 9 <#horas-disponibles>`__
+
+`7. OBTENER CATÁLOGO 10 <#obtener-catálogo>`__
+
+`7.1 Obtener los ingredientes elegibles para un producto
+15 <#obtener-los-ingredientes-elegibles-para-un-producto>`__
+
+`8. CREACIÓN DEL PEDIDO 21 <#creación-del-pedido>`__
+
+`9. AÑADIR UN PRODUCTO 22 <#añadir-un-producto>`__
+
+`10. ESTABLECER UNA DIRECCIÓN DE ENTREGA
+26 <#establecer-una-dirección-de-entrega>`__
+
+`11. OBTENER MEDIOS DE PAGO 29 <#obtener-medios-de-pago>`__
+
+`12. FINALIZAR PEDIDO 31 <#finalizar-pedido>`__
+
+   |image1|
+
+   La información que contiene la presente propuesta es propiedad
+   exclusiva de Vector ITC Group No está permitida la reproducción de la
+   misma, salvo con autorización expresa.
+
+   No está permitida la distribución de la misma a personas, entidades o
+   empresas no mencionadas explícitamente en el panel de información de
+   control y versiones, salvo con autorización expresa de Vector, SL.
+
+   |image2|
+
+1. INTRODUCCIÓN 
+================
+
+Este documento representa la propuesta funcional para dar respuesta a la
+necesidad de Telepizza de crear un producto integrable por consumidores
+externos.
+
+Desde Telepizza se quiere dar la posibilidad a un usuario, que realice
+un pedido a Telepizza a través de un consumidor externo.
+
+2. FLUJO DE CREACIÓN DE PEDIDO BÁSICO 
+======================================
+
+Para poder crear un pedido sencillo mediante la Apificación, será
+necesario realizar las llamadas a los servicios en el siguiente orden
+concreto:
+
+-  Token e inicio de pedido
+
+..
+
+   POST /connect/token
+
+-  Obtener tiendas por localización (a recoger)
+
+..
+
+   GET /shop/location/{lat}/{lng}
+
+-  Obtener horas disponibles
+
+..
+
+   GET /shop/availablehours
+
+-  Obtener catálogo
+
+..
+
+   GET /catalogue/shop/{id}
+
+-  Creación del pedido
+
+..
+
+   POST /order/create
+
+-  Añadir un producto
+
+..
+
+   POST /order/product
+
+-  Establecer los datos de reparto
+
+..
+
+   GET /order/getaddress
+
+   POST /order/delivery
+
+-  Obtener los medios de pago para la tienda GET /shop/{id}/payments
+
+-  Finalizar el pedido
+
+..
+
+   POST /order/save
+
+3. FLUJO DE CREACIÓN DE UN PEDIDO DE KIOSCO 
+============================================
+
+Para poder crear un pedido de kiosko mediante la Apificación, será
+necesario realizar las llamadas a los servicios en el siguiente orden
+concreto:
+
+-  Token e inicio de pedido
+
+..
+
+   POST /connect/token
+
+-  Obtener catálogo
+
+..
+
+   GET /catalogue/shop/{ShopId}/{DeliveryType}
+
+-  Creación del pedido
+
+..
+
+   POST /order/createlocal
+
+-  Añadir un producto
+
+..
+
+   POST /order/product
+
+-  Finalizar el pedido
+
+..
+
+   POST /order/savelocal
+
+4. INICIO DE PEDIDO 
+====================
+
+   POST /connect/token
+
+Esta llamada se encarga de obtener un token de seguridad para autorizar
+las invocaciones a las llamadas y será obligatorio usarlo en todas las
+llamadas.
+
+La invocación a esta llamada será la primera que se realice antes de
+poder realizar cualquier otra dentro del servicio.
+
+Los parámetros de entrada son:
+
+============== ====================================================================================================== =============================
+Parámetro         Descripción                                                                                            Ejemplo
+============== ====================================================================================================== =============================
+**x-consumer**    Token del consumidor codificado en Base64                                                              Base64(“prueba”) =
+                                                                                                                     
+                                                                                                                         “cHJ1ZWJhOkFwaWZpY2F0aW9u”
+**grant_type**    Tipo de permiso                                                                                        client_credentials
+**scope**         Para pedir acceso a los recursos con un determinado rol de lectura, escritura, sólo de acceso, etc.    “ALL”
+**Device**        Tipo de dispositivo que interactúa con el servicio. (tablet, ipad, smartphone o mobile)                “tablet”
+**Culture**       Cultura. (es_es, es_en, es_ca, …)                                                                      “es_es”
+**Language**      Idioma en el que se mostrará la información                                                            “es”
+============== ====================================================================================================== =============================
+
+La respuesta contendrá el token que se usará en las llamadas posteriores
+y se corresponderá con el campo **x-auth-back** en los parámetros de
+entrada del resto de llamadas. Este token será válido durante un periodo
+de tiempo y dentro del ámbito del pedido en curso.
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 1-6
+   :linenos:
+
+5. TIENDAS POR LOCALIZACIÓN 
+============================
+
+   GET /shop/location/{lat}/{lng}
+
+Obtiene los códigos de las tiendas y el coste de reparto por
+localización más cercana a una latitud y longitud concreta. Esta llamada
+es sólo para pedidos a recoger en tienda.
+
+   Los parámetros de entrada son:
+
+================== ============================================================================= ==========================
+   Parámetro          Descripción                                                                Ejemplo
+================== ============================================================================= ==========================
+   **x-auth-back**    Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                
+                      /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                
+                      token_type + “ ” + access_token                                           
+   **lat**            Latitud de la posición que se quiere consultar                             “41.67246”
+   **lng**            Longitud de la posición que se quiere consultar                            “-0.890901”
+================== ============================================================================= ==========================
+
+Esta llamada se puede ejecutar de forma independiente al resto de
+existentes.
+
+La información que devuelve consta del identificador de la tienda que se
+utilizará en consultas posteriores, junto con la dirección de la tienda
+(calle, ciudad y provincia).
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 7-38
+   :linenos:
+
+6. HORAS DISPONIBLES 
+=====================
+
+   POST /shop/availablehours
+
+En el caso de que se informen los campos de **lat** y **lng**, se
+encarga de consultar y devolver las horas disponibles de reparto a
+domicilio. Si se informa el campo **shopId**, devolverá las horas en las
+que se podrá recoger el pedido en la tienda indicada.
+
+   Los parámetros de entrada son:
+
+=================== ============================================================================= ==========================
+   Parámetro           Descripción                                                                Ejemplo
+=================== ============================================================================= ==========================
+   **x-auth-back**     Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                 
+                       /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                 
+                       token_type + “ ” + access_token                                           
+   **lat**             Latitud de la posición que se quiere consultar                             “41.67246”
+   **lng**             Longitud de la posición que se quiere consultar                            “-0.890901”
+   **shopId**          Identificador de la tienda                                                 “00145”
+   **deliveryType**    Tipo de reparto                                                            1. – Local
+                                                                                                 
+                                                                                                  2. – Domicilio
+                                                                                                 
+                                                                                                  3. – Recoger en Tienda
+=================== ============================================================================= ==========================
+
+Esta llamada se puede ejecutar de forma independiente al resto de
+existentes.
+
+La respuesta devolverá el listado de horas que la tienda tiene
+disponibles para recoger pedidos o para envío a domicilio, junto con el
+tiempo de espera entre hora y hora, configurado para la tienda asignada
+a esa localización, o para la tienda indicada.
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 40-63
+   :linenos:
+
+7. OBTENER CATÁLOGO 
+====================
+
+   GET /catalogue/shop/{id}
+
+Esta llamada se encarga de devolver todos los productos disponibles para
+una tienda.
+
+   Los parámetros de entrada son:
+
+================== ============================================================================= ==========================
+   Parámetro          Descripción                                                                Ejemplo
+================== ============================================================================= ==========================
+   **x-auth-back**    Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                
+                      /connect/token”: token_type + “ ” + access_token                           eyJhbGciOiJodHRwOi8vd3d3…”
+   **Id**             Código identificador de la tienda.                                         “00145”
+================== ============================================================================= ==========================
+
+Dentro de la respuesta se encuentra el listado de productos agrupados
+por categorías y subcategorías. Y a su vez, dentro de cada producto
+podrán haber definidos diferentes tamaños del producto elegibles del
+listado, ingredientes por defecto de cada producto (podrán ser añadidos)
+y diferentes tamaños de masa también elegibles, entre otros campos.
+
+|image3|
+
+======================== ================================================================================================================================================== ==================================================================================================
+\                        **PRODUCTO**                                                                                                                                      
+======================== ================================================================================================================================================== ==================================================================================================
+   Parámetro                Descripción                                                                                                                                     Ejemplo
+   **productId**            Número Identificador del producto                                                                                                               “999990000006710”
+   **Name**                 Nombre del producto                                                                                                                             Pizza Barbacoa
+   **description**          Descripción del contenido del producto                                                                                                          Masa fresca, bacon, pollo, topping a base de mozzarella, salsa barbacoa y doble de carne de vacuno
+   **Image**                Ruta de la imagen asociada al producto                                                                                                          http://triton.tel epizza.es/nvol/es /content/producto s/pbbq_d.png
+**portionsAllowed**         Campo que indica si el producto permite división en porciones o mitades.                                                                        “true”
+**defaultSizeId**           Número identificador del tamaño por defecto. Este código pertenecerá a uno de los tamaños existentes dentro de listado del campo “sizes[]”      “20” → Mediana
+**maxNumIngredients**       Número máximo de ingredientes adicionales que está permitido añadir a este producto                                                             1
+**sizes[]**                 Listado de tamaños elegibles del producto. (“Individual”, “Mediana”, “Familiar”, “Strómboli”)                                                  
+**defaultIngredients[]**    Listado de ingredientes por defecto que componen el producto. Estos ingredientes podrán ser modificados.                                       
+**productBaseSizes[]**      Listado de tipos de bases o formatos de base del producto. En el caso de pizzas, son los tipos de masas que se pueden escoger para el producto.
+                                                                                                                                                                           
+                            (“Clásica”, “3 Pisos”, “Fina”,                                                                                                                 
+                                                                                                                                                                           
+                            “Integral” o “QuadRoller”)                                                                                                                     
+======================== ================================================================================================================================================== ==================================================================================================
+
+..
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 66-277
+   :linenos:
+
+
+GET /catalogue/shop/{ShopId}/{DeliveryType}
+
+Esta llamada se encarga de comenzar un pedido de un kiosco, obteniendo
+en su respuesta el catálogo correspondiente,
+
+   Los parámetros de entrada son:
+
+=================== ============================================================================= ==========================
+   Parámetro           Descripción                                                                Ejemplo
+=================== ============================================================================= ==========================
+   **x-auth-back**     Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                 
+                       /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                 
+                       token_type + “ ” + access_token                                           
+   **ShopId**          Código identificador de la tienda.                                         “00145”
+   **DeliveryType**    Código de tipo de reparto. Puede ser 1 ó 3. [1 = local, 3 = recoger]       1
+=================== ============================================================================= ==========================
+
+La respuesta sigue la misma estructura que el punto anterior.
+
+Además del catálogo para una tienda concreta, existen varias llamadas
+que se engloban dentro del servicio del catálogo que se encargan de
+obtener un producto con todos sus ingredientes a partir de su código, o
+también se pueden obtener los ingredientes completos existentes en una
+tienda.
+
+-  Obtiene todos los ingredientes elegibles para una tienda GET
+   /catalogue/choices/shop/{id}
+
+-  Obtiene los ingredientes elegibles para un producto en una tienda
+
+GET /catalogue/shop/{shopId}/product/{productId}/choices
+
+7.1 Obtener los ingredientes elegibles para un producto 
+--------------------------------------------------------
+
+GET /catalogue/shop/{shopId}/product/{productId}/choices
+
+Permite obtener todos los ingredientes que se pueden añadir o elegir
+para componer un producto compuesto a partir del identificador del
+producto.
+
+   Los parámetros de entrada son:
+
+================== ============================================================================= ==========================
+   Parámetro          Descripción                                                                Ejemplo
+================== ============================================================================= ==========================
+   **x-auth-back**    Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                
+                      /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                
+                      token_type + “ ” + access_token                                           
+   **shopId**         Identificador de la tienda                                                 “00145”
+   **productId**      Identificador del producto                                                 “999990000006710”
+================== ============================================================================= ==========================
+
+El listado devolverá tantas repeticiones del mismo código de producto
+como agrupaciones de ingredientes en las que esté incluido el producto
+seleccionado. Dentro de cada agrupación estarán incluidos el listado de
+ingredientes seleccionables. Estas agrupaciones son una clasificación
+por tipo de ingrediente que permite saber la cantidad mínima y máxima de
+ingredientes que pueden ser añadidos o no, al producto.
+
+Esta agrupación se podrá utilizar para mostrar en pantalla la
+información de estos ingredientes en listados seleccionables u otros
+contenedores:
+
+|image4|
+
+Por ejemplo, si el campo mínimo de ingredientes viene informado con un 0
+y el de máximo de ingredientes con valor 1, se correspondería con un
+ingrediente opcional que puede o no ir incluido. En la imagen anterior
+el ejemplo se corresponde con el de: “¿La quieres gratinar?”.
+
+Sin embargo, si el campo de mínimo viene con valor 1 y el de máximo
+viene con valor 1, quiere decir que será un elemento obligatorio y a su
+vez, llevará un listado de ingredientes para poder elegir uno. En la
+imagen anterior, se correspondería con el campo de: “Topping a base de
+Mozzarella”.
+
+Otro caso diferente, sería si el campo mínimo viniese con valor 0 y el
+máximo con valor 8, implica que son ingredientes opcionales, y como
+máximo se podrán añadir 8 ingredientes en total, 8 del mismo tipo u 8 en
+total de todos ellos. Por ejemplo, el listado de ingredientes siguiente:
+
+|image5|
+
+|image6|
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 280-396
+   :linenos:
+
+8. CREACIÓN DEL PEDIDO 
+=======================
+
+   POST /order/create
+
+Esta llamada realiza crea o inicializa el pedido vacío. Este paso es
+previo para poder añadir productos, promociones y añadir un medio de
+pago, y por lo tanto necesario para poder realizar cualquier pedido. Si
+ya había añadidos productos, se inicializa el pedido sin productos ni
+promociones.
+
+   El parámetro de entrada es:
+
+================== ============================================================================= ==========================
+   Parámetro          Descripción                                                                Ejemplo
+================== ============================================================================= ==========================
+   **x-auth-back**    Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                
+                      /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                
+                      token_type + “ ” + access_token                                           
+   **shopId**         Identificador de la tienda                                                 “00145”
+   **dateTime**       Fecha seleccionada para recogida o entrega del pedido.                     “2019-05-24T12:09:00.094Z”
+================== ============================================================================= ==========================
+
+La respuesta vendrá vacía si ha ido todo bien (con un código de
+respuesta “204 – NoContent”).
+
+   POST /order/createlocal
+
+Esta llamada realiza crea o inicializa el pedido vacío. Este paso es
+previo para poder añadir productos, promociones y añadir un medio de
+pago, y por lo tanto necesario para poder realizar cualquier pedido. Si
+ya había añadidos productos, se inicializa el pedido sin productos ni
+promociones.
+
+   El parámetro de entrada es:
+
+================== ============================================================================= ==========================
+   Parámetro          Descripción                                                                Ejemplo
+================== ============================================================================= ==========================
+   **x-auth-back**    Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                
+                      /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                
+                      token_type + “ ” + access_token                                           
+================== ============================================================================= ==========================
+
+La respuesta vendrá vacía si ha ido todo bien (con un código de
+respuesta “204 – NoContent”).
+
+9. AÑADIR UN PRODUCTO 
+======================
+
+   POST /order/product
+
+Esta llamada permite agregar un producto a un pedido ya existente, que
+este pedido esté vacío o que contenga otros productos incluidos en él.
+
+El producto de entrada puede ser un producto simple como una bebida que
+no contiene ingredientes elegibles o seleccionables o un producto
+compuesto (ejemplo: pizza) que contiene ingredientes por defecto y
+también otros ingredientes que se pueden ir agregando según una lista.
+
+   Los parámetros de entrada son:
+
+================== ==================================================================== =============================
+   Parámetro       Descripción                                                             Ejemplo
+================== ==================================================================== =============================
+   **x-auth-back** Autorización para el servicio con el token obtenido en la llamada al    “Bearer
+                                                                                       
+                   “POST /connect/token”:                                                  eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                       
+                   token_type + “ ” + access_token                                     
+   **product[]**   Información del producto que se desea añadir al pedido.             
+   **size**        Código identificador del tamaño                                         Mediana → “20”
+   **units**       Cantidad de unidades del mismo producto                                 1
+================== ==================================================================== =============================
+
+================= =================================================================================
+\                    **producto[]**                                                                
+================= =================================================================================
+   **products[]** Listado de productos con sus ingredientes y elecciones que se añadirán al pedido.
+================= =================================================================================
+
+======================= ================================================== ========================================================================================================
+**products[]**                                                            
+======================= ================================================== ========================================================================================================
+   **partialProductId** Código identificador del producto                     “999990000006710”
+   **name**             Nombre del producto                                   “Pizza Barbacoa”
+   **description**      Descripción breve del producto                        “Masa fresca, bacon, pollo, topping a base de mozzarella, salsa barbacoa y doble de carne de vacuno.”
+   **choices[]**        Listado de ingredientes elegibles para el producto
+======================= ================================================== ========================================================================================================
+
+=============== ================================================================= ===========================
+\                  **choices[]**                                                 
+=============== ================================================================= ===========================
+   **choiceId** Identificador del ingrediente que se incluirá dentro del producto    “999990005365052”
+   **name**     Nombre del ingrediente                                               “SALSA TOMATE Y ORÉGANO”
+=============== ================================================================= ===========================
+
+..
+
+   Ejemplo de parámetros de entrada:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 398-438
+   :linenos:
+
+La respuesta de esta llamada devolverá el pedido actual completo con
+todos los productos que se han añadido hasta el momento.
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 440-540
+   :linenos:
+
+10. ESTABLECER UNA DIRECCIÓN DE ENTREGA 
+========================================
+
+Para establecer una dirección de entrega, es necesario hacer dos
+llamadas a los siguientes endpoints:
+
+   GET /order/getaddress
+
+Esta llamada se encarga de obtener la información necesaria para
+establecer la dirección de entrega.
+
+   Los parámetros de entrada son:
+
+================== ==================================================================== =============================
+   Parámetro       Descripción                                                             Ejemplo
+================== ==================================================================== =============================
+   **x-auth-back** Autorización para el servicio con el token obtenido en la llamada al    “Bearer
+                                                                                       
+                   “POST /connect/token”: token_type + “ ” + access_token                  eyJhbGciOiJodHRwOi8vd3d3…”
+================== ==================================================================== =============================
+
+..
+
+   Los parámetros de salida son:
+
+======================= =========================================================================================== =======
+   Parámetro               Descripción                                                                              Ejemplo
+======================= =========================================================================================== =======
+   **primaryField[]**      Campos adicionales para identificar el domicilio del cliente (Portal, Piso, Letra, etc.)
+   **secondaryField[]**    Campos adicionales para identificar el domicilio del cliente (Portal, Piso, Letra, etc.)
+======================= =========================================================================================== =======
+
+============= ==================================================================== ==========
+\                **primaryField[], secondaryField[]**                             
+============= ==================================================================== ==========
+**key**          Identificador del campo                                              1
+**label**        Nombre que identifica el campo que se va a informar en el “value”    “Letra”
+**value**        Valor asociado al campo “label”                                      “A”
+**maxLenght**    Longitud máxima de caracteres que tendrá el campo “value”.           3
+**editable**     Si el campo value se puede editar o no (True o False)                True
+============= ==================================================================== ==========
+
+..
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 542-602
+   :linenos:
+
+
+POST /order/delivery
+
+Esta llamada se encarga de establecer una dirección de entrega al pedido
+en curso.
+
+   Los parámetros de entrada son:
+
+=================== ============================================================================================================================== ==========================
+   Parámetro           Descripción                                                                                                                 Ejemplo
+=================== ============================================================================================================================== ==========================
+   **x-auth-back**     Autorización para el servicio con el token obtenido en la llamada al “POST /connect/token”: token_type + “ ” + access_token “Bearer
+                                                                                                                                                  
+                                                                                                                                                   eyJhbGciOiJodHRwOi8vd3d3…”
+**deliveryOrder[]**    Información asociada al reparto del pedido                                                                                 
+=================== ============================================================================================================================== ==========================
+
+======================== ===================================================================
+**deliveryInputOrder[]**                                                                    
+======================== ===================================================================
+**phone**                   Teléfono del cliente                                            
+**deliveryObservations**    Notas que se tendrán en cuenta a la hora de realizar el reparto.
+**address[]**               Dirección del cliente donde se repartirá el pedido              
+======================== ===================================================================
+
+==================== ===========================================================================================
+\                       **address[]**                                                                           
+==================== ===========================================================================================
+**primaryField[]**      Campos adicionales para identificar el domicilio del cliente (Portal, Piso, Letra, etc.)
+**secondaryField[]**    Campos adicionales para identificar el domicilio del cliente (Portal, Piso, Letra, etc.)
+==================== ===========================================================================================
+
+============= ==================================================================== ==========
+\                **primaryField[], secondaryField[]**                             
+============= ==================================================================== ==========
+**key**          Identificador del campo                                              1
+**label**        Nombre que identifica el campo que se va a informar en el “value”    “Letra”
+**value**        Valor asociado al campo “label”                                      “A”
+**maxLenght**    Longitud máxima de caracteres que tendrá el campo “value”.           3
+**editable**     Si el campo value se puede editar o no (True o False)                True
+============= ==================================================================== ==========
+
+Ejemplo de parámetros de entrada:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 605-670
+   :linenos:
+
+11. OBTENER MEDIOS DE PAGO 
+===========================
+
+   GET /shop/{id}/payments
+
+Esta llamada permite obtener un listado de los diferentes medios de pago
+que permite una tienda en concreto por medio del identificador de la
+tienda.
+
+Los parámetros de entrada son:
+
+================== ============================================================================= ==========================
+   Parámetro          Descripción                                                                Ejemplo
+================== ============================================================================= ==========================
+   **x-auth-back**    Autorización para el servicio con el token obtenido en la llamada al “POST “Bearer
+                                                                                                
+                      /connect/token”:                                                           eyJhbGciOiJodHRwOi8vd3d3…”
+                                                                                                
+                      token_type + “ ” + access_token                                           
+   **id**             Número que identifica la tienda en nuestro sistema.                        “00145”
+================== ============================================================================= ==========================
+
+Como resultado se obtendrá un listado con los medios de pago disponibles
+para la tienda que se desea consultar.
+
+   Los parámetros de salida son:
+
+========================== ========================================================================================================================================================================================== ======================================================
+   Parámetro                  Descripción                                                                                                                                                                             Ejemplo
+========================== ========================================================================================================================================================================================== ======================================================
+   **electronicPaymentId**    Identificador del medio de pago                                                                                                                                                         “1”
+   **paymentTypeName**        Nombre del medio de pago elegido                                                                                                                                                        “Efectivo Euros”
+   **changeEfective[]**       En caso de seleccionar el tipo de pago del pedido en Efectivo, devuelve un listado con el cambio, en monedas o billetes, que dispondrá el repartidor como máximo para afrontar el pago. “10”
+                                                                                                                                                                                                                     
+                                                                                                                                                                                                                      (El repartidor sólo llevará 10€ de cambio como máximo)
+   **isExternalPayment**      Indica si el un medio de pago externo o medio de pago electrónico. (True o False)                                                                                                       false
+   **tokenType**              0 -> Medio de pago no Tokenizable. 1 -> Tokenizable con restricciones por usuario.                                                                                                      0
+                                                                                                                                                                                                                     
+                              2 -> Tokenizable                                                                                                                                                                       
+========================== ========================================================================================================================================================================================== ======================================================
+
+**El campo tokenType**: este campo es relativo a la propiedad de
+“billing_agreement” de la pasarela de pagos y vendrá definida por un
+checkbox que el usuario pueda marcar cuando vaya a pagar, en la pantalla
+de selección de medio de pago. Es importante definir los casos en los
+que dicho checkbox estará disponible o no para ser marcado por el
+usuario. Por esta razón se dispondrá de una propiedad numérica
+denominada “\ **tokenType**\ ” al momento de pedir la información de los
+medios de pago de la tienda.
+
+Los posibles valores que puede tomar este campo, y lo que representa
+cada uno, son:
+
+-  **Valor numérico 0**: El medio de pago **NO es tokenizable**, por lo
+   tanto el checkbox no debería poder usarse. Esto implica que al llamar
+   a la pasarela el campo “billing_agreement” debería ser False.
+
+-  **Valor numérico 1**: El medio de pago **SÍ es tokenizable PERO con
+   una restricción**. Esta restricción consiste en que solamente se
+   puede guardar un único token para este medio de pago por usuario.
+
+..
+
+   Esto significa que para saber si el checkbox debe estar disponible
+   para el usuario hay que, primero, revisar si dicho usuario tiene
+   tokens asociados a ese medio de pago (lo cual se conoce a través de
+   la llamada a “\ *GET /customer/{id}/allpayments*\ ”) y, si no tiene
+   ninguno, tendrá el checkbox disponible. Mientras que si tiene algún
+   token asociado a dicho medio de pago el checkbox no estará disponible
+   para el usuario. El campo “billing_agreement” que se utiliza al
+   llamar a la pasarela deberá ser False para este segundo caso;
+   mientras que, por otro lado, será dependiente de que el checkbox esté
+   marcado o desmarcado para pasar un True o False en el primer caso.
+
+-  **Valor numérico 2**: El medio de pago **SÍ es tokenizable** y sin
+   restricciones, por lo tanto, el checkbox debería estar activo siempre
+   que se selecciona un medio de pago con este tipo de token. El campo
+   “billing_agreement” que se utiliza al llamar a la pasarela es
+   entonces dependiente de que el checkbox esté marcado o desmarcado
+   para pasar un True o False respectivamente.
+
+..
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 671-690
+   :linenos:
+
+12. FINALIZAR PEDIDO 
+=====================
+
+   POST /order/save
+
+   POST /order/savelocal
+
+Por medio de esta llamada se permite finalizar el pedido (básico o de
+kiosco) realizando el pago mediante el medio de pago en concreto.
+
+   Los parámetros de entrada son:
+
+======================== ================================================================================================================================ ==========================
+   Parámetro                Descripción                                                                                                                   Ejemplo
+======================== ================================================================================================================================ ==========================
+   **x-auth-back**          Autorización para el servicio con el token obtenido en la llamada al “POST /connect/token”: token_type + “ ” + access_token   “Bearer
+                                                                                                                                                         
+                                                                                                                                                          eyJhbGciOiJodHRwOi8vd3d3…”
+   **paymentType**          Tipo de medio de pago con el que se va a realizar el pago del pedido.                                                            “1”
+                                                                                                                                                         
+                            Cash = 1,                                                                                                                    
+                                                                                                                                                         
+                            TicketRestaurant = 4,                                                                                                        
+                                                                                                                                                         
+                            Dataphone = 16, PayPal = 20,                                                                                                 
+                                                                                                                                                         
+                            ConexFlow = 21,                                                                                                              
+                                                                                                                                                         
+                            Kuapay = 25,                                                                                                                 
+                                                                                                                                                         
+                            WebPay = 26,                                                                                                                 
+                                                                                                                                                         
+                            Iuapay = 27, PayU = 28,                                                                                                      
+                                                                                                                                                         
+                            RedSys = 32,                                                                                                                 
+                                                                                                                                                         
+                            PayMe = 33,                                                                                                                  
+                                                                                                                                                         
+                            PayTPV = 43                                                                                                                  
+   **digitCard**            Número de tarjeta de crédido, solo sí se selecciona el medio de pago Tarjeta de Crédito en el campo “paymentType”             vacío
+   **Token**                Cadena identificativa del pago electrónico                                                                                    vacío
+   **clientCash**           Cambio de dinero en efectivo que tendrá que disponer el repartidor para el pago del pedido en efectivo y entrega a domicilio. “50”
+   **OrderObservations**    Notas de elaboración del pedido                                                                                              
+======================== ================================================================================================================================ ==========================
+
+..
+
+   Ejemplo de parámetros de entrada:
+
+.. literalinclude:: code/codigo_apificacion.txt
+  :lines: 692-698
+  :linenos:
+
+La respuesta al grabar el pedido contendrá la información de la tienda
+que suministra los productos, los datos relevantes de la dirección de
+entrega junto con el precio del pedido, el coste de reparto y la hora de
+reparto.
+
+   Ejemplo de respuesta:
+
+.. literalinclude:: code/codigo_apificacion.txt
+   :lines: 700-711
+   :linenos:
+
+.. |image0| image:: media/imageapificacion.png
+   :width: 3.83333in
+   :height: 4.04167in
+.. |image1| image:: media/image2.png
+   :width: 6.19375in
+.. |image2| image:: media/image2.png
+   :width: 6.19375in
+.. |image3| image:: media/image3.emf
+   :width: 3.89394in
+   :height: 2.35625in
+.. |image4| image:: media/image4.jpg
+   :width: 5.04744in
+   :height: 2.44044in
+.. |image5| image:: media/image5.jpg
+   :width: 5.06944in
+   :height: 1.59028in
+.. |image6| image:: media/image6.jpg
+   :width: 6.29097in
+   :height: 4.19722in
